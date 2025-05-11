@@ -3,7 +3,7 @@
 This is the base repository for Web App project. Please read the [instructions](instructions.md) for details.
 
 
-#added by me
+#added by me (I worked alone)
 
 MBTA Finder Web Application
 Project Overview
@@ -31,7 +31,7 @@ Python 3.8 or higher
 Mapbox API key
 MBTA API key
 Installation
-Clone the repository
+Cloned the repository
 git clone https://github.com/yourusername/MBTA-Web-App-Project.git
 cd MBTA-Web-App-Project
 Create a virtual environment and activate it
@@ -75,7 +75,13 @@ Add user accounts to save favorite stations
 Implement trip planning functionality
 License
 MIT
+Reflection:
 
+Developing this project was both rewarding and challenging. From a development standpoint, learning how to work with multiple APIs (Mapbox and MBTA) was a big step forward in understanding how real-world data flows into applications. Implementing helper functions to abstract logic helped me organize my code better and made it easier to debug. The use of environment variables was also a new concept that improved my understanding of app security and configuration. One challenge I faced was parsing nested JSON responses from the APIs, especially when handling errors or missing fields — this pushed me to think more carefully about edge cases and exception handling.
+
+Since I worked individually, I planned out tasks using a rough timeline and made sure to document everything along the way. Initially, I underestimated how much time would be needed for testing different location inputs and ensuring graceful failure when users entered invalid addresses. If I were to redo this project, I would start earlier on testing and perhaps implement a logging feature to track inputs and errors during development. I also would have explored how to deploy the app to a free platform like GitHub Pages or Vercel for broader access.
+
+In terms of learning, this project greatly improved my confidence in working with Flask and APIs. I also gained hands-on experience with version control via GitHub, which I now see as essential for any collaborative or personal tech project. I used AI tools like ChatGPT to help break down tricky error messages and understand syntax or structural improvements for my functions. These tools were helpful for boosting efficiency, but I made sure to fully understand the code before using or modifying any suggestions. I now feel more prepared to take on web development and automation projects beyond this course.
 Acknowledgments
 MBTA for providing the API
 Mapbox for the geocoding and mapping services
