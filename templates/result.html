@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBTA Station Finder - Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.14.1/mapbox-gl.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MBTA Station Finder</h1>
+            <p>Find the nearest MBTA station from any location in Boston area</p>
+        </header>
+
+        <main>
+            <div class="search-container">
+                <form action="{{ url_for('find_station') }}" method="post">
+                    <div class="search-input">
+                        <input type="text" name="location" id="location" placeholder="Enter an address, landmark, or place in Boston..." value="{{ search_data.query }}">
+                        <button type="submit">Find Station</button>
+                    </div>
+                </form>
+                
+                <div class="back-link">
+                    <a href="{{ url_for('index') }}">← Back to Home</a>
+                </div>
+            </div>
+
+            <div class="result-container">
+                <div class="result-details">
+                    <h2>Search Results</h2>
+
+                    <div class="location-card">
+                        <h3>Your Location</h3>
+                        <p>{{ search_data.address }}</p>
+                    </div>
+                    
+                    <div class="station-card">
+                        <h3>Nearest MBTA Station</h3>
+                        <h4>{{ search_data.station.name }}</h4>
+                        <p class="distance">{{ search_data.distance }} miles away</p>
+
+                        {% if search_data.station.description %}
+                        <p class="station-description">{{ search_data.station.description }}</p>
+                        {% endif %}
+
+                        <div class="route-info">
+                            <h4>Routes Available:</h4>
+                            <div class="routes-list">
+                                {% for route in search_data.station.routes %}
+                                <div class="route-badge" style="background-color: #{{ route.color }}">
+                                    {{ route.id }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <button id="save-favorite">Save to Favorites</button>
+                    </div>
+                    
+                    {% if arrivals %}
+                    <div class="arrivals-card">
+                        <h3>Upcoming Arrivals</h3>
+                        <div class="arrivals-list">
+                            {% for arrival in arrivals %}
+                            <div class="arrival-item">
+                                <div class="route-badge" style="background-color: #{{ arrival.route_color }}">
+                                    {{ arrival.route_name }}
+                                </div>
+                                <div class="arrival-time">{{ arrival.arrival_time }}</div>
+                            </div>
+                            {% endfor %}
+                            {% if arrivals|length == 0 %}
+                            <p class="no-data-message">No upcoming arrivals information available</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div id="map" style="height: 300px; margin-top: 20px;"></div>
+        </main>
+
+        <footer>
+            <p>Created for OIM3640 Software Design Final Project</p>
+        </footer>
+    </div>
+
+    <script>
+        mapboxgl.accessToken = '{{ mapbox_token }}';
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [{{ search_data.longitude }}, {{ search_data.latitude }}],
+            zoom: 13
+        });
+
+        // Add markers
+        new mapboxgl.Marker({ color: '#3887be' })  // user location
+            .setLngLat([{{ search_data.longitude }}, {{ search_data.latitude }}])
+            .addTo(map);
+
+        new mapboxgl.Marker({ color: '#f30' })  // station
+            .setLngLat([{{ search_data.station.longitude }}, {{ search_data.station.latitude }}])
+            .addTo(map);
+
+        // Save to favorites AJAX
+        document.getElementById('save-favorite').addEventListener('click', () => {
+            fetch("{{ url_for('add_favorite') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    address: "{{ search_data.address }}",
+                    latitude: "{{ search_data.latitude }}",
+                    longitude: "{{ search_data.longitude }}",
+                    station: { name: "{{ search_data.station.name }}" }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert("Location saved to favorites!");
+                } else if (data.status === "already_exists") {
+                    alert("This location is already in your favorites.");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

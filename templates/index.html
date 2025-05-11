@@ -1,82 +1,525 @@
 {% extends "base.html" %}
-
-{% block title %}MBTA Finder - Find Nearby Stations{% endblock %}
+{% block title %}MBTA Finder - Home{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-body">
-                <h1 class="card-title text-center mb-4">Find Nearby MBTA Stations</h1>
-                
-                <form id="locationForm" action="{{ url_for('nearest_mbta') }}" method="POST">
-                    <div class="mb-3">
-                        <label for="place_name" class="form-label">Enter a place or address in Boston:</label>
-                        <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-map-marker-alt"></i>
-                            </span>
-                            <input type="text" class="form-control" id="place_name" name="place_name" 
-                                placeholder="e.g. Fenway, Museum of Science, Downtown Crossing" required>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-search me-1"></i> Find Stations
-                            </button>
-                        </div>
-                        <div class="form-text">Try locations in Boston for best results</div>
+<div class="container">
+    <header>
+        <h1>MBTA Station Finder</h1>
+        <p>Find the nearest MBTA station from any location in Boston area</p>
+    </header>
+
+    <main>
+        <div class="search-container">
+            <form action="{{ url_for('find_station') }}" method="post">
+                <div class="search-input">
+                    <input type="text" name="location" id="location" placeholder="Enter an address, landmark, or place in Boston...">
+                    <button type="submit">Find Station</button>
+                </div>
+            </form>
+
+            {% if error %}
+            <div class="error-message">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <div class="assistant-help">
+                <button type="button" id="help-button">Need Help?</button>
+                <div class="assistant-dialog" id="assistant-dialog">
+                    <div class="assistant-header">
+                        <h3>MBTA Assistant</h3>
+                        <span class="close-assistant">&times;</span>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Filter by transportation type:</label>
-                        <div class="d-flex flex-wrap gap-2">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="subway" name="type[]" value="0,1" checked>
-                                <label class="form-check-label" for="subway">Subway</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="commuter_rail" name="type[]" value="2">
-                                <label class="form-check-label" for="commuter_rail">Commuter Rail</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="bus" name="type[]" value="3">
-                                <label class="form-check-label" for="bus">Bus</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="ferry" name="type[]" value="4">
-                                <label class="form-check-label" for="ferry">Ferry</label>
+                    <div class="assistant-content">
+                        <div class="assistant-messages" id="assistant-messages">
+                            <div class="assistant-message">
+                                Hi there! I can help you use this app to find MBTA stations. What would you like to know?
                             </div>
                         </div>
+                        <div class="assistant-input">
+                            <input type="text" id="user-question" placeholder="Ask a question...">
+                            <button id="send-question">Send</button>
+                        </div>
                     </div>
-                </form>
-                
-                <div id="spinnerContainer" class="spinner-container">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Searching for stations...</p>
                 </div>
             </div>
         </div>
-        
-        <div class="card mt-4">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-info-circle me-2"></i>About This App
-                </h5>
-                <p class="card-text">
-                    This application helps you find the nearest MBTA stations to any location in Boston.
-                    Simply enter a place name or address, and we'll show you the closest stations along
-                    with information about wheelchair accessibility and upcoming arrivals.
-                </p>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <div class="saved-sections">
+            <!-- Recent Searches Section -->
+            <div class="recent-searches">
+                <div class="section-header">
+                    <h2>Recent Searches</h2>
+                    {% if recent_searches %}
+                    <form action="{{ url_for('clear_history') }}" method="post">
+                        <button type="submit" class="clear-button">Clear All</button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                <div class="searches-list">
+                    {% if recent_searches %}
+                        {% for search in recent_searches %}
+                        <div class="search-item" data-user-lat="{{ search.user_lat }}" data-user-lng="{{ search.user_lng }}" data-station-lat="{{ search.station_lat }}" data-station-lng="{{ search.station_lng }}">
+                            <div class="search-details">
+                                <h3>{{ search.address }}</h3>
+                                <p>Nearest station: {{ search.station }} ({{ search.distance }} miles)</p>
+                                <p class="search-time">{{ search.timestamp }}</p>
+                            </div>
+                            <div class="search-actions">
+                                <button class="show-on-map-btn">Show on Map</button>
+                                <button class="save-favorite-btn" data-address="{{ search.address }}" data-lat="{{ search.user_lat }}" data-lng="{{ search.user_lng }}" data-station="{{ search.station }}">Save to Favorites</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="no-data-message">No recent searches yet</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Favorites Section -->
+            <div class="favorites">
+                <h2>Favorite Locations</h2>
+                <div class="favorites-list">
+                    {% if favorites %}
+                        {% for favorite in favorites %}
+                        <div class="favorite-item">
+                            <div class="favorite-details">
+                                <h3>{{ favorite.address }}</h3>
+                                <p>Nearest station: {{ favorite.station_name }}</p>
+                            </div>
+                            <div class="favorite-actions">
+                                <button class="search-again-btn" data-address="{{ favorite.address }}">Search Again</button>
+                                <button class="remove-favorite-btn" data-address="{{ favorite.address }}">Remove</button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="no-data-message">No favorite locations saved</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
-    </div>
+    </main>
+
+    <footer>
+        <p>Created for OIM3640 Software Design Final Project</p>
+    </footer>
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
-    document.getElementById('locationForm').addEventListener('submit', function() {
-        document.getElementById('spinnerContainer').style.display = 'block';
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Mapbox
+    mapboxgl.accessToken = '{{ mapbox_token }}';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [-71.060982, 42.358002],
+        zoom: 12
     });
+    map.addControl(new mapboxgl.NavigationControl());
+    
+    // Assistant elements
+    const helpButton = document.getElementById('help-button');
+    const assistantDialog = document.getElementById('assistant-dialog');
+    const closeAssistant = document.querySelector('.close-assistant');
+    const sendQuestion = document.getElementById('send-question');
+    const userQuestion = document.getElementById('user-question');
+    const assistantMessages = document.getElementById('assistant-messages');
+    
+    // State management for conversation
+    let conversationContext = {
+        lastQuery: '',
+        mentionedLocations: [],
+        currentTopic: null
+    };
+    
+    // Ensure assistant dialog starts hidden
+    if (assistantDialog) {
+        assistantDialog.style.display = 'none';
+    }
+    
+    // Setup event listeners
+    if (helpButton) {
+        helpButton.onclick = function() {
+            if (assistantDialog) assistantDialog.style.display = 'block';
+        };
+    }
+    
+    if (closeAssistant) {
+        closeAssistant.onclick = function() {
+            if (assistantDialog) assistantDialog.style.display = 'none';
+        };
+    }
+    
+    if (sendQuestion) {
+        sendQuestion.onclick = function() {
+            handleQuestionSubmission();
+        };
+    }
+    
+    if (userQuestion) {
+        userQuestion.onkeypress = function(e) {
+            if (e.key === 'Enter') {
+                handleQuestionSubmission();
+                e.preventDefault();
+            }
+        };
+    }
+    
+    // Improved scroll function that ensures the newest messages are visible
+    function scrollToBottom() {
+        // Force a small delay to ensure content has rendered
+        setTimeout(() => {
+            if (assistantMessages) {
+                assistantMessages.scrollTop = assistantMessages.scrollHeight;
+            }
+        }, 10); // Short delay to ensure DOM update
+    }
+    
+    // Advanced pattern matching
+    function getBestResponse(userQuery) {
+        const query = userQuery.toLowerCase();
+        
+        const patterns = [
+            {
+                keywords: ['how', 'use', 'app', 'work', 'search'],
+                threshold: 2,
+                response: "To use this app, simply type an address or landmark in Boston in the search box and click 'Find Station'. I'll show you the nearest MBTA station with distance and available routes."
+            },
+            {
+                keywords: ['mbta', 'stand', 'mean', 'transportation', 'transit'],
+                threshold: 1,
+                response: "MBTA stands for Massachusetts Bay Transportation Authority. It's Boston's public transportation system including subway (the 'T'), buses, commuter rail, and ferries."
+            },
+            {
+                keywords: ['save', 'favorite', 'bookmark', 'store', 'location'],
+                threshold: 1,
+                response: "You can save locations by clicking 'Save to Favorites' after searching. Your favorites appear in the panel on the right for quick access later."
+            },
+            {
+                keywords: ['line', 'color', 'red', 'blue', 'green', 'orange'],
+                threshold: 2,
+                response: "The MBTA has several color-coded lines: Red Line (Cambridge/Dorchester), Orange Line (Jamaica Plain to Malden), Blue Line (Revere to Downtown), Green Line (four branches: B,C,D,E), and Silver Line (waterfront/airport service)."
+            },
+            {
+                keywords: ['station', 'stop', 'close', 'near', 'nearby', 'closest'],
+                threshold: 2,
+                response: "I'll find the closest MBTA station to any address in Boston. Just type a location like 'Fenway', 'Harvard', or '100 Tremont Street'."
+            },
+            {
+                keywords: ['accurate', 'accuracy', 'precise', 'distance', 'calculation'],
+                threshold: 1,
+                response: "Distance calculations use the Haversine formula for straight-line distance between coordinates. The app is quite accurate for Boston locations, typically within 0.1 miles."
+            },
+            {
+                keywords: ['arrival', 'time', 'schedule', 'next', 'train', 'bus', 'departure'],
+                threshold: 1,
+                response: "This app shows real-time arrivals at each station! When you search for a location, you'll see upcoming arrivals with times for each route serving that station."
+            },
+            {
+                keywords: ['what', 'can', 'you', 'do', 'help', 'feature', 'capabilities'],
+                threshold: 3,
+                response: "I can help you with several things! I can explain how to use this app, tell you about MBTA lines and stations, explain how to save favorites, and provide information about the real-time arrivals feature. You can also ask me about specific locations like 'Harvard' or 'Fenway'."
+            }
+        ];
+        
+        // Check for location queries to offer search functionality
+        const locationMatch = query.match(/(fenway|harvard|downtown|back bay|boston common|quincy|cambridge)/i);
+        if (locationMatch) {
+            return createSearchSuggestion(locationMatch[0]);
+        }
+        
+        // Score each pattern
+        const scores = patterns.map(pattern => {
+            const matchedKeywords = pattern.keywords.filter(keyword => query.includes(keyword));
+            return {
+                pattern: pattern,
+                score: matchedKeywords.length
+            };
+        });
+        
+        // Get best match above threshold
+        const bestMatch = scores.reduce((best, current) => 
+            (current.score >= current.pattern.threshold && current.score > best.score) ? current : best, 
+            { score: 0, pattern: null });
+        
+        return bestMatch.pattern ? 
+            bestMatch.pattern.response : 
+            "I'm not sure about that. Try asking about MBTA lines, stations, how to use the app, or saving favorites.";
+    }
+    
+    // Create search suggestion with interactive button
+    function createSearchSuggestion(location) {
+        return {
+            type: 'interactive',
+            text: `Would you like me to find the nearest MBTA station to ${location}?`,
+            actions: [{
+                label: `Search for "${location}"`,
+                handler: () => {
+                    document.getElementById('location').value = location;
+                    document.querySelector('form').submit();
+                }
+            }]
+        };
+    }
+    
+    // Create message with interactive components
+    function createInteractiveMessage(data) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'assistant-message';
+        
+        const textSpan = document.createElement('p');
+        textSpan.textContent = data.text;
+        messageDiv.appendChild(textSpan);
+        
+        if (data.actions && data.actions.length > 0) {
+            const actionContainer = document.createElement('div');
+            actionContainer.className = 'assistant-actions';
+            
+            data.actions.forEach(action => {
+                const button = document.createElement('button');
+                button.className = 'assistant-action-button';
+                button.textContent = action.label;
+                button.onclick = action.handler;
+                actionContainer.appendChild(button);
+            });
+            
+            messageDiv.appendChild(actionContainer);
+        }
+        
+        return messageDiv;
+    }
+    
+    // Typing indicator
+    function showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'assistant-typing';
+        typingDiv.id = 'typing-indicator';
+        
+        const indicatorDiv = document.createElement('div');
+        indicatorDiv.className = 'typing-indicator';
+        
+        for (let i = 0; i < 3; i++) {
+            const dot = document.createElement('span');
+            indicatorDiv.appendChild(dot);
+        }
+        
+        typingDiv.appendChild(indicatorDiv);
+        assistantMessages.appendChild(typingDiv);
+        scrollToBottom(); // Updated to use the new function
+    }
+    
+    function hideTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+    
+    // Main function to handle user questions
+    function handleQuestionSubmission() {
+        if (!userQuestion || !assistantMessages) return;
+        
+        const question = userQuestion.value.trim();
+        if (!question) return;
+        
+        // Create user message element
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.className = 'user-message';
+        userMessageDiv.textContent = question;
+        assistantMessages.appendChild(userMessageDiv);
+        scrollToBottom(); // Added scroll after user message
+        
+        // Show typing indicator
+        showTypingIndicator();
+        
+        // Get appropriate response
+        const response = getBestResponse(question);
+        
+        // Update context
+        conversationContext.lastQuery = question;
+        // Extract locations
+        const locationMatch = question.match(/(in|at|near|around)\s([A-Za-z\s]+)/i);
+        if (locationMatch && locationMatch[2]) {
+            conversationContext.mentionedLocations.push(locationMatch[2]);
+        }
+        
+        // Simulate typing delay
+        setTimeout(() => {
+            // Hide typing indicator
+            hideTypingIndicator();
+            
+            // Add response to chat
+            if (typeof response === 'object' && response.type === 'interactive') {
+                assistantMessages.appendChild(createInteractiveMessage(response));
+            } else {
+                const assistantMessageDiv = document.createElement('div');
+                assistantMessageDiv.className = 'assistant-message';
+                assistantMessageDiv.textContent = response;
+                assistantMessages.appendChild(assistantMessageDiv);
+            }
+            
+            // Clear input and scroll
+            userQuestion.value = '';
+            scrollToBottom(); // Updated to use the new function
+        }, Math.random() * 650 + 350); // Random delay between 350-1000ms
+    }
+    
+    // Event delegation for buttons in recent searches
+    document.querySelector('.searches-list').addEventListener('click', (e) => {
+        // Show on map button
+        if (e.target.classList.contains('show-on-map-btn')) {
+            const searchItem = e.target.closest('.search-item');
+            const userLat = parseFloat(searchItem.dataset.userLat);
+            const userLng = parseFloat(searchItem.dataset.userLng);
+            const stationLat = parseFloat(searchItem.dataset.stationLat);
+            const stationLng = parseFloat(searchItem.dataset.stationLng);
+            
+            // Clear existing markers
+            document.querySelectorAll('.mapboxgl-marker').forEach(marker => marker.remove());
+            
+            // Add markers for user location and station
+            new mapboxgl.Marker({ color: '#3887be' })
+                .setLngLat([userLng, userLat])
+                .addTo(map);
+            
+            new mapboxgl.Marker({ color: '#f30' })
+                .setLngLat([stationLng, stationLat])
+                .addTo(map);
+            
+            // Fit map to show both points
+            const bounds = new mapboxgl.LngLatBounds()
+                .extend([userLng, userLat])
+                .extend([stationLng, stationLat]);
+            
+            map.fitBounds(bounds, { padding: 100 });
+            
+            // Draw a line between points if possible
+            drawRouteLine(userLng, userLat, stationLng, stationLat);
+        }
+        
+        // Save to favorites button
+        if (e.target.classList.contains('save-favorite-btn')) {
+            const button = e.target;
+            const address = button.dataset.address;
+            const latitude = button.dataset.lat;
+            const longitude = button.dataset.lng;
+            const stationName = button.dataset.station;
+            
+            // Send AJAX request to save favorite
+            fetch("{{ url_for('add_favorite') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    address: address,
+                    latitude: latitude,
+                    longitude: longitude,
+                    station: {
+                        name: stationName
+                    }
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    alert("Location added to favorites!");
+                    location.reload(); // Refresh to show updated favorites
+                } else if (data.status === "already_exists") {
+                    alert("This location is already in your favorites.");
+                }
+            });
+        }
+    });
+
+    // Event delegation for buttons in favorites
+    document.querySelector('.favorites-list').addEventListener('click', (e) => {
+        // Search again button
+        if (e.target.classList.contains('search-again-btn')) {
+            const address = e.target.dataset.address;
+            document.getElementById('location').value = address;
+            document.querySelector('form').submit();
+        }
+        
+        // Remove favorite button
+        if (e.target.classList.contains('remove-favorite-btn')) {
+            const address = e.target.dataset.address;
+            
+            // Send AJAX request to remove favorite
+            fetch("{{ url_for('remove_favorite') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    address: address
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "success") {
+                    e.target.closest('.favorite-item').remove();
+                    
+                    // Check if there are no more favorites
+                    const favoritesList = document.querySelector('.favorites-list');
+                    if (favoritesList.children.length === 0) {
+                        const noFavoritesMsg = document.createElement('p');
+                        noFavoritesMsg.className = 'no-data-message';
+                        noFavoritesMsg.textContent = 'No favorite locations saved';
+                        favoritesList.appendChild(noFavoritesMsg);
+                    }
+                }
+            });
+        }
+    });
+
+    // Function to draw a line between two points
+    function drawRouteLine(startLng, startLat, endLng, endLat) {
+        // Remove any existing route layers
+        if (map.getSource('route')) {
+            map.removeLayer('route');
+            map.removeSource('route');
+        }
+        
+        // Add route as a GeoJSON line
+        map.addSource('route', {
+            'type': 'geojson',
+            'data': {
+                'type': 'Feature',
+                'properties': {},
+                'geometry': {
+                    'type': 'LineString',
+                    'coordinates': [
+                        [startLng, startLat],
+                        [endLng, endLat]
+                    ]
+                }
+            }
+        });
+        
+        map.addLayer({
+            'id': 'route',
+            'type': 'line',
+            'source': 'route',
+            'layout': {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
+            'paint': {
+                'line-color': '#888',
+                'line-width': 4,
+                'line-dasharray': [2, 1]
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

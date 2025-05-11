@@ -1,95 +1,163 @@
-# MBTA-Web-App-Project
+# MBTA Station Finder
 
-This is the base repository for Web App project. Please read the [instructions](instructions.md) for details.
+## Project Overview
+The MBTA Station Finder is a Flask web application that helps users find the nearest MBTA (Massachusetts Bay Transportation Authority) station from any location in the Boston area. The application uses the Mapbox API for geocoding and visualization, and the MBTA API to fetch real-time public transit data. This tool solves the common problem of travelers trying to locate the closest public transportation option in an unfamiliar city.
 
+![MBTA Station Finder Screenshot](screenshot.png)
 
-#added by me (I worked alone)
+---
 
-MBTA Finder Web Application
-Project Overview
-MBTA Finder is an interactive web application that helps users find the nearest MBTA (Massachusetts Bay Transportation Authority) stations to any location in Boston. By simply entering a place name or address, users can discover nearby public transportation options, view their locations on an interactive map, and access real-time arrival information. The application combines data from the Mapbox Geocoding API and MBTA API to provide a seamless user experience.
+## Features
 
-Features
-Location Search: Find MBTA stations near any place or address in Boston
-Interactive Map: Visualize both your location and nearby stations on a Mapbox map
-Transportation Filtering: Filter results by transportation type (subway, bus, commuter rail, ferry)
-Real-time Arrivals: Get up-to-date arrival predictions for each station
-Accessibility Information: See whether stations are wheelchair accessible
-Distance Calculation: Know how far you need to walk to reach the station
-Responsive Design: Works on both desktop and mobile devices
-Technology Stack
-Python: Core programming language
-Flask: Web framework for building the application
-Mapbox API: For geocoding and map visualization
-MBTA API: For station data and real-time arrival information
-Bootstrap: Front-end framework for responsive design
-JavaScript: For interactive map and real-time data updates
-HTML/CSS: For structure and styling
-Getting Started
-Prerequisites
-Python 3.8 or higher
-Mapbox API key
-MBTA API key
-Installation
-Cloned the repository
-git clone https://github.com/yourusername/MBTA-Web-App-Project.git
-cd MBTA-Web-App-Project
-Create a virtual environment and activate it
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-Install required packages
-pip install -r requirements.txt
-Create a .env file in the project root with your API keys:
-MAPBOX_TOKEN=your_mapbox_api_key
-MBTA_API_KEY=your_mbta_api_key
-FLASK_SECRET_KEY=any_random_string_for_session_security
-Run the application
-python app.py
-Open your web browser and navigate to http://127.0.0.1:5000/
-Project Structure
-/MBTA-Web-App-Project
+- 🔍 **Location-Based Search**  
+  Enter any address, landmark, or place name in the Boston area to find nearby stations
+
+- 📏 **Distance Calculation**  
+  Shows the precise distance in miles between your location and the nearest MBTA station using the Haversine formula
+
+- 🗺️ **Interactive Map Visualization**  
+  Dynamic Mapbox integration with custom markers and route lines between your location and the station
+
+- 🕓 **Search History Management**  
+  Automatically saves your five most recent searches for quick access using session storage
+
+- ⭐ **Favorites System**  
+  Save frequently used locations to your favorites list for instant retrieval
+
+- 💬 **AI-Assisted Helper**  
+  Intelligent chatbot assistant that answers questions and helps you navigate the application
+
+- 🚆 **Station Information**  
+  Displays routes, line colors, and accessibility information for found stations
+
+---
+
+## Technologies Used
+
+- **Python 3.x** – Core programming language with focus on modular object-oriented design
+- **Flask** – Web framework for routing, templates, and session management
+- **Mapbox API** – Geocoding services and interactive map visualization
+- **MBTA API** – Real-time transit data including stations, routes, and service information
+- **JavaScript** – Client-side interactivity, AJAX requests, and dynamic content updates
+- **HTML/CSS** – Responsive frontend interface with custom styling
+- **Flask Sessions** – User state management without requiring database infrastructure
+
+---
+
+## Project Structure
+mbta-station-finder/
+├── app.py                 # Main Flask application with route handlers and class definitions
 ├── static/
 │   └── css/
-│       └── style.css
+│       └── styles.css     # Custom styling for the interface
+│   └── js/                # (Optional) JavaScript modules if separated from templates
 ├── templates/
-│   ├── base.html
-│   ├── error.html
-│   ├── index.html
-│   └── mbta_station.html
-├── .env
-├── .gitignore
-├── app.py
-├── mbta_helper.py
-└── README.md
-Usage
-Enter a location in Boston (e.g., "Fenway Park", "Boston Common")
-Select which transportation types you're interested in
-Click "Find Stations"
-View the nearest station information and interactive map
-Check real-time arrivals that automatically update every 30 seconds
-Future Improvements
-Add walking directions from your location to the station
-Implement nearby attractions and points of interest
-Include detailed station amenities information
-Add user accounts to save favorite stations
-Implement trip planning functionality
+│   ├── base.html          # Base template with common layout elements
+│   ├── index.html         # Home page with search form and assistant
+│   └── result.html        # Results view showing station information
+├── .env                   # Environment variables (not in version control)
+├── .gitignore             # Git ignore file for sensitive data and cache
+├── requirements.txt       # Project dependencies
+└── README.md              # Project documentation
+
+---
+
+## Software Design Principles
+
+### Modular Class-Based Architecture
+The application follows object-oriented principles with a clean separation of concerns:
+
+- `MBTAStationFinder`: Encapsulates all API interactions and data processing
+  - Geocoding location queries to coordinates
+  - Finding nearest stations based on coordinates
+  - Retrieving route information
+  - Calculating distances between points
+
+- `SearchHistoryManager`: Manages user data persistence
+  - Tracks recent searches 
+  - Handles favorites management
+  - Maintains session state
+
+### Error Handling and Fault Tolerance
+- Comprehensive try/except blocks ensure the application remains stable
+- Graceful error messages when APIs fail or return unexpected data
+- Fallback options when certain features are unavailable
+
+### Clean Code Practices
+- Consistent naming conventions following Python PEP8 guidelines
+- Comprehensive docstrings and type hints for all methods
+- Logical organization of code with related functionality grouped together
+
+---
+
+## Setup Instructions
+
+### 1. Clone the Repository
+git clone https://github.com/your-username/mbta-station-finder.git
+cd mbta-station-finder
+### 2. Install Dependencies
+pip install -r requirements.txt
+### 3. Set Up Environment Variables
+Create a .env file in the root directory with:
+MAPBOX_ACCESS_TOKEN=your_mapbox_key_here
+MBTA_API_KEY=your_mbta_key_here
+FLASK_SECRET_KEY=your_secret_key_here
+* not added because I don't want to get in trouble or get robbed
+### 4. Run the Application
+python app.py
+### 5. Access in Browser
+Navigate to http://127.0.0.1:5000 to use the application
+
+Implementation Details
+Key Components
+
+Geocoding: Converts user-entered locations to precise latitude/longitude coordinates
+Station Finding: Queries the MBTA API with coordinates to locate the nearest stations
+Distance Calculation: Uses the Haversine formula to calculate straight-line distances
+Session Management: Employs Flask's session mechanism to store user data without a database
+Dynamic UI: JavaScript-powered interface with real-time updates and interactive elements
+
+Technical Workflow
+
+User enters a location in the search box
+The application geocodes this to coordinates using Mapbox
+These coordinates are used to query the MBTA API for nearby stations
+The application calculates the distance to each station
+Results are displayed on an interactive map and in a detailed information panel
+Search is saved to the user's history for future reference
+
+
+Development Process
+This project began as a simple proof-of-concept and evolved through several iterations:
+Phase 1: Core Functionality
+
+Basic Flask application setup
+Integration with Mapbox for geocoding
+MBTA API connection for station data
+
+Phase 2: Enhanced User Experience
+
+Added interactive mapping
+Implemented distance calculations
+Improved error handling and user feedback
+
+Phase 3: Advanced Features
+
+Developed session-based history tracking
+Created favorites system
+Built intelligent assistant chatbot
+Added real-time data display and route visualization
+
+
+Credits and Acknowledgments
+Developed by Kaley Taylor for OIM3640: Problem Solving & Software Design at Babson College.
+APIs Used:
+
+MBTA API
+Mapbox API
+
+AI Assistance:
+Some portions of code and content were developed with the assistance of AI tools (ChatGPT and Claude) to support design planning, debugging, and documentation refinement. All implementation decisions, testing, and final code architecture were completed by the developer.
+
 License
-MIT
-Reflection:
-
-Developing this project was both rewarding and challenging. From a development standpoint, learning how to work with multiple APIs (Mapbox and MBTA) was a big step forward in understanding how real-world data flows into applications. Implementing helper functions to abstract logic helped me organize my code better and made it easier to debug. The use of environment variables was also a new concept that improved my understanding of app security and configuration. One challenge I faced was parsing nested JSON responses from the APIs, especially when handling errors or missing fields — this pushed me to think more carefully about edge cases and exception handling.
-
-Since I worked individually, I planned out tasks using a rough timeline and made sure to document everything along the way. Initially, I underestimated how much time would be needed for testing different location inputs and ensuring graceful failure when users entered invalid addresses. If I were to redo this project, I would start earlier on testing and perhaps implement a logging feature to track inputs and errors during development. I also would have explored how to deploy the app to a free platform like GitHub Pages or Vercel for broader access.
-
-In terms of learning, this project greatly improved my confidence in working with Flask and APIs. I also gained hands-on experience with version control via GitHub, which I now see as essential for any collaborative or personal tech project. I used AI tools like ChatGPT to help break down tricky error messages and understand syntax or structural improvements for my functions. These tools were helpful for boosting efficiency, but I made sure to fully understand the code before using or modifying any suggestions. I now feel more prepared to take on web development and automation projects beyond this course.
-Acknowledgments
-MBTA for providing the API
-Mapbox for the geocoding and mapping services
-Boston College for the project assignment
-
-#### Example 2: Template Not Found Error (jinja2.exceptions.TemplateNotFound)
-
-This error occurred when Flask couldn't locate the `base.html` file. It reminded me how important project structure is — specifically that all HTML templates must be stored in a folder named `templates/` inside the main project directory. Once I placed the `base.html` file in the correct folder, the issue was resolved. (thank God!)
-
-![Jinja Template Error](static/images/folders_are_important.jpg) (I tried to attach it)
-
+This project is provided for educational purposes as part of Babson College's Spring 2025 curriculum.
