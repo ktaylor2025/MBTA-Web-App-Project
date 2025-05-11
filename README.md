@@ -86,3 +86,10 @@ Acknowledgments
 MBTA for providing the API
 Mapbox for the geocoding and mapping services
 Boston College for the project assignment
+
+#### Example 2: Template Not Found Error (jinja2.exceptions.TemplateNotFound)
+
+This error occurred when Flask couldn't locate the `base.html` file. It reminded me how important project structure is — specifically that all HTML templates must be stored in a folder named `templates/` inside the main project directory. Once I placed the `base.html` file in the correct folder, the issue was resolved. (thank God!)
+
+![Jinja Template Error](static/images/folders_are_important.jpg) (I tried to attach it)
+
