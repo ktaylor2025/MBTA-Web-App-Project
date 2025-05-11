@@ -1,14 +1,82 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hi</title>
-  </head>
+{% extends "base.html" %}
 
-  <body>
-    <h1>Hi</h1>
-    <p>This is an amazing app to help you find the nearest MBTA station</p>
-  </body>
-</html>
+{% block title %}MBTA Finder - Find Nearby Stations{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title text-center mb-4">Find Nearby MBTA Stations</h1>
+                
+                <form id="locationForm" action="{{ url_for('nearest_mbta') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="place_name" class="form-label">Enter a place or address in Boston:</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </span>
+                            <input type="text" class="form-control" id="place_name" name="place_name" 
+                                placeholder="e.g. Fenway, Museum of Science, Downtown Crossing" required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i> Find Stations
+                            </button>
+                        </div>
+                        <div class="form-text">Try locations in Boston for best results</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Filter by transportation type:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="subway" name="type[]" value="0,1" checked>
+                                <label class="form-check-label" for="subway">Subway</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="commuter_rail" name="type[]" value="2">
+                                <label class="form-check-label" for="commuter_rail">Commuter Rail</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="bus" name="type[]" value="3">
+                                <label class="form-check-label" for="bus">Bus</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="ferry" name="type[]" value="4">
+                                <label class="form-check-label" for="ferry">Ferry</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                
+                <div id="spinnerContainer" class="spinner-container">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Searching for stations...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-info-circle me-2"></i>About This App
+                </h5>
+                <p class="card-text">
+                    This application helps you find the nearest MBTA stations to any location in Boston.
+                    Simply enter a place name or address, and we'll show you the closest stations along
+                    with information about wheelchair accessibility and upcoming arrivals.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('locationForm').addEventListener('submit', function() {
+        document.getElementById('spinnerContainer').style.display = 'block';
+    });
+</script>
+{% endblock %}

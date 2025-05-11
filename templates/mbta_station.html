@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Nearest MBTA Station to {{ place_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item active">Results for "{{ place_name }}"</li>
+            </ol>
+        </nav>
+        
+        <h1 class="mb-4">Nearest MBTA Stations to {{ place_name }}</h1>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Map Column -->
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">
+                    <i class="fas fa-map me-2"></i>Location Map
+                </h5>
+                <div id="map"></div>
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Blue marker: Your location. Red markers: MBTA stations.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Station Info Column -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-subway me-2"></i>Nearest Station
+                </h5>
+                
+                <div class="station-info">
+                    <h3>{{ station_name }}</h3>
+                    
+                    <!-- Accessibility info -->
+                    <div class="mb-3">
+                        {% if wheelchair_accessible %}
+                        <span class="accessibility-icon accessible">
+                            <i class="fas fa-wheelchair"></i>
+                        </span>
+                        <span class="text-success">Wheelchair accessible</span>
+                        {% else %}
+                        <span class="accessibility-icon not-accessible">
+                            <i class="fas fa-wheelchair"></i>
+                        </span>
+                        <span class="text-danger">Not wheelchair accessible</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Distance info -->
+                    <p>
+                        <i class="fas fa-walking me-2"></i>
+                        <span id="distance">Calculating distance...</span>
+                    </p>
+                    
+                    <!-- Station lines -->
+                    <div class="mb-3">
+                        <h6>Lines:</h6>
+                        <div id="station-lines">
+                            {% for line in station_lines %}
+                            <span class="line-pill {{ line.color }}-line">{{ line.name }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Realtime arrivals -->
+                    <div>
+                        <h6>
+                            <i class="fas fa-clock me-2"></i>Upcoming Arrivals:
+                            <small id="last-updated" class="text-muted">(Loading...)</small>
+                        </h6>
+                        <div id="arrivals">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="ms-2">Fetching real-time arrivals...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Return button -->
+            <div class="card-footer">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="fas fa-search me-1"></i>Search Another Location
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize map
+    mapboxgl.accessToken = '{{ mapbox_token }}';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [{{ station_lng }}, {{ station_lat }}],
+        zoom: 14
+    });
+    
+    // Add markers
+    // User location
+    const userMarker = new mapboxgl.Marker({ color: '#3887be' })
+        .setLngLat([{{ user_lng }}, {{ user_lat }}])
+        .setPopup(new mapboxgl.Popup().setHTML("<strong>Your location:</strong><br>{{ place_name }}"))
+        .addTo(map);
+    
+    // Station location
+    const stationMarker = new mapboxgl.Marker({ color: '#f44336' })
+        .setLngLat([{{ station_lng }}, {{ station_lat }}])
+        .setPopup(new mapboxgl.Popup().setHTML("<strong>{{ station_name }}</strong>"))
+        .addTo(map);
+    
+    // Create bounds to fit both markers
+    const bounds = new mapboxgl.LngLatBounds();
+    bounds.extend([{{ user_lng }}, {{ user_lat }}]);
+    bounds.extend([{{ station_lng }}, {{ station_lat }}]);
+    
+    // Fit map to bounds
+    map.fitBounds(bounds, { padding: 70 });
+    
+    // Calculate distance
+    const userLocation = [{{ user_lat }}, {{ user_lng }}];
+    const stationLocation = [{{ station_lat }}, {{ station_lng }}];
+    
+    // Function to calculate distance
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // Earth's radius in meters
+        const φ1 = lat1 * Math.PI/180;
+        const φ2 = lat2 * Math.PI/180;
+        const Δφ = (lat2-lat1) * Math.PI/180;
+        const Δλ = (lon2-lon1) * Math.PI/180;
+
+        const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        
+        return R * c; // in meters
+    }
+    
+    const distanceInMeters = calculateDistance(
+        userLocation[0], userLocation[1], 
+        stationLocation[0], stationLocation[1]
+    );
+    
+    // Update distance display
+    const distanceElement = document.getElementById('distance');
+    if (distanceInMeters < 1000) {
+        distanceElement.textContent = `About ${Math.round(distanceInMeters)} meters from your location`;
+    } else {
+        const distanceInKm = (distanceInMeters / 1000).toFixed(2);
+        distanceElement.textContent = `About ${distanceInKm} km from your location`;
+    }
+    
+    // Fetch real-time arrivals
+    async function fetchArrivals() {
+        try {
+            const response = await fetch(`/api/arrivals/{{ station_id }}`);
+            const data = await response.json();
+            
+            const arrivalsContainer = document.getElementById('arrivals');
+            const lastUpdated = document.getElementById('last-updated');
+            
+            if (data.arrivals && data.arrivals.length > 0) {
+                arrivalsContainer.innerHTML = '';
+                
+                // Sort arrivals by arrival time
+                data.arrivals.sort((a, b) => new Date(a.arrival_time) - new Date(b.arrival_time));
+                
+                // Display the first 5 arrivals
+                const arrivalsToDisplay = data.arrivals.slice(0, 5);
+                
+                arrivalsToDisplay.forEach(arrival => {
+                    // Calculate minutes until arrival
+                    const arrivalTime = new Date(arrival.arrival_time);
+                    const now = new Date();
+                    const minutesUntil = Math.round((arrivalTime - now) / 60000);
+                    
+                    let minutesText;
+                    if (minutesUntil <= 0) {
+                        minutesText = 'Arriving now';
+                    } else if (minutesUntil === 1) {
+                        minutesText = '1 minute';
+                    } else {
+                        minutesText = `${minutesUntil} minutes`;
+                    }
+                    
+                    // Create arrival item
+                    const arrivalItem = document.createElement('div');
+                    arrivalItem.className = 'mb-2 p-2 border-bottom';
+                    arrivalItem.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="line-pill ${arrival.line_color}-line">${arrival.line}</span>
+                                <span class="ms-2">${arrival.destination}</span>
+                            </div>
+                            <div class="text-end">
+                                <div class="arrival-time">${arrivalTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                <div class="arrival-countdown">${minutesText}</div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    arrivalsContainer.appendChild(arrivalItem);
+                });
+                
+                // Update last updated time
+                const now = new Date();
+                lastUpdated.textContent = `(Updated at ${now.toLocaleTimeString()})`;
+                
+            } else {
+                arrivalsContainer.innerHTML = '<p>No upcoming arrivals found</p>';
+            }
+            
+        } catch (error) {
+            console.error('Error fetching arrivals:', error);
+            document.getElementById('arrivals').innerHTML = 
+                '<p class="text-danger">Could not load real-time arrivals</p>';
+        }
+    }
+    
+    // Initial fetch and then refresh every 30 seconds
+    fetchArrivals();
+    setInterval(fetchArrivals, 30000);
+</script>
+{% endblock %}
